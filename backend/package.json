@@ -1,0 +1,9 @@
+{
+  "name": "forge-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Serverless proxy that keeps the image-generation API key off the device.",
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}
