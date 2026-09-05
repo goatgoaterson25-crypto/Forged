@@ -16,7 +16,7 @@ android {
 
         // Set this to your deployed Vercel URL before building,
         // e.g. "https://forge-backend.vercel.app"
-        buildConfigField("String", "API_BASE_URL", "\"https://YOUR-PROJECT.vercel.app\"")
+        buildConfigField("String", "API_BASE_URL", "\"https://forged-liart.vercel.app\"")
     }
 
     buildFeatures {
