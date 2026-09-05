@@ -5,7 +5,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="Forge"
+        android:label="Kilnwork"
         android:theme="@style/Theme.Forge">
         <activity
             android:name=".MainActivity"
