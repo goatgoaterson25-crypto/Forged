@@ -8,6 +8,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -174,7 +175,7 @@ private fun ReorderableGrid(
                                 )
                             }
                             .pointerInput(index) {
-                                androidx.compose.foundation.gestures.detectTapGestures(
+                                detectTapGestures(
                                     onTap = { onTap(index) }
                                 )
                             }
