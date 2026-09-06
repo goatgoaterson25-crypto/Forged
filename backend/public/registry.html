@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free AI Registry</title>
+<style>
+  :root {
+    --bg: #101314; --panel: #171b1c; --line: #2a3133;
+    --ink: #e9ece9; --ink-dim: #93a09c; --accent: #4de8b0; --danger: #e8654d;
+    --mono: 'SFMono-Regular', Consolas, monospace; --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); padding: 20px 14px 60px; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .sub { font-size: 12px; color: var(--ink-dim); font-family: var(--mono); margin-bottom: 20px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .provider { font-weight: 600; font-size: 14px; }
+  .badge { font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+  .badge.free { background: rgba(77,232,176,0.15); color: var(--accent); }
+  .badge.gated { background: rgba(232,101,77,0.15); color: var(--danger); }
+  .claim { font-size: 12px; color: var(--ink-dim); margin-bottom: 4px; }
+  .detail { font-size: 12px; color: var(--ink); line-height: 1.5; }
+  .meta { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); margin-top: 8px; }
+  .footnote { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); margin-top: 20px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Free AI Registry</h1>
+  <div class="sub">real, tested status — not marketing claims</div>
+  <div id="list">loading...</div>
+  <div class="footnote" id="footnote"></div>
+</div>
+
+<script>
+fetch('/api/registry')
+  .then(r => r.json())
+  .then(data => {
+    const list = document.getElementById('list');
+    list.innerHTML = '';
+    data.registry.forEach(entry => {
+      const isFree = entry.status.toLowerCase().includes('confirmed free') || entry.status.toLowerCase().includes('works');
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="row">
+          <span class="provider">${entry.provider}</span>
+          <span class="badge ${isFree ? 'free' : 'gated'}">${entry.status}</span>
+        </div>
+        <div class="claim">claim: "${entry.claim}"</div>
+        <div class="detail">${entry.detail}</div>
+        <div class="meta">${entry.verification === 'live' ? 'checked live just now' : 'manually verified ' + entry.verifiedAt}${entry.latencyMs ? ' · ' + entry.latencyMs + 'ms' : ''}</div>
+      `;
+      list.appendChild(card);
+    });
+    document.getElementById('footnote').textContent = data.note;
+  })
+  .catch(err => {
+    document.getElementById('list').textContent = 'Error loading registry: ' + err.message;
+  });
+</script>
+</body>
+</html>
