@@ -118,6 +118,7 @@ private fun ReorderableGrid(
     val bounds = remember { mutableStateMapOf<Int, Rect>() }
     var draggingIndex by remember { mutableStateOf(-1) }
     var dragPosition by remember { mutableStateOf(Offset.Zero) }
+    var didDrag by remember { mutableStateOf(false) }
 
     val rows = (uris.size + columns - 1) / columns
 
@@ -151,6 +152,7 @@ private fun ReorderableGrid(
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = {
                                         draggingIndex = index
+                                        didDrag = true
                                         dragPosition = bounds[index]?.center ?: Offset.Zero
                                     },
                                     onDrag = { change, amount ->
@@ -171,6 +173,11 @@ private fun ReorderableGrid(
                                     onDragCancel = { draggingIndex = -1 }
                                 )
                             }
+                            .pointerInput(index) {
+                                androidx.compose.foundation.gestures.detectTapGestures(
+                                    onTap = { onTap(index) }
+                                )
+                            }
                     ) {
                         bitmap?.let {
                             Image(
@@ -181,10 +188,6 @@ private fun ReorderableGrid(
                                     .clip(RoundedCornerShape(6.dp))
                             )
                         }
-                        androidx.compose.foundation.clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                            indication = null
-                        ) {}
                         CornerBrackets(color = Accent)
                     }
                 }
