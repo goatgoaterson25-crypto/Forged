@@ -36,13 +36,13 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-private val Background = Color(0xFF101314)
-private val Panel = Color(0xFF171B1C)
-private val Line = Color(0xFF2A3133)
-private val Ink = Color(0xFFE9ECE9)
-private val InkDim = Color(0xFF93A09C)
-private val Accent = Color(0xFF4DE8B0)
-private val Danger = Color(0xFFE8654D)
+val Background = Color(0xFF101314)
+val Panel = Color(0xFF171B1C)
+val Line = Color(0xFF2A3133)
+val Ink = Color(0xFFE9ECE9)
+val InkDim = Color(0xFF93A09C)
+val Accent = Color(0xFF4DE8B0)
+val Danger = Color(0xFFE8654D)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
                     onSurface = Ink
                 )
             ) {
-                ForgeScreen()
+                RootScreen()
             }
         }
     }
@@ -110,6 +110,41 @@ suspend fun generateImage(
     }
 }
 
+@Composable
+fun RootScreen() {
+    var tab by remember { mutableStateOf(0) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f)) {
+            if (tab == 0) ForgeScreen() else GalleryScreen()
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Panel)
+                .padding(vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            TextButton(onClick = { tab = 0 }) {
+                Text(
+                    "generate",
+                    color = if (tab == 0) Accent else InkDim,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp
+                )
+            }
+            TextButton(onClick = { tab = 1 }) {
+                Text(
+                    "gallery",
+                    color = if (tab == 1) Accent else InkDim,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForgeScreen() {
@@ -129,7 +164,7 @@ fun ForgeScreen() {
                 .padding(20.dp)
         ) {
             Text(
-                "Forge",
+                "Kilnwork",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Ink
@@ -233,11 +268,14 @@ fun ForgeScreen() {
             ) {
                 when {
                     loading -> CircularProgressIndicator(color = Accent)
-                    resultBitmap != null -> Image(
-                        bitmap = resultBitmap!!.asImageBitmap(),
-                        contentDescription = "Generated image",
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    resultBitmap != null -> {
+                        Image(
+                            bitmap = resultBitmap!!.asImageBitmap(),
+                            contentDescription = "Generated image",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        CornerBrackets(color = Accent, length = 20f)
+                    }
                     errorMessage != null -> Text(
                         errorMessage ?: "",
                         color = Danger,
@@ -252,6 +290,30 @@ fun ForgeScreen() {
                         fontSize = 13.sp,
                         modifier = Modifier.padding(20.dp)
                     )
+                }
+            }
+
+            if (resultBitmap != null) {
+                Spacer(Modifier.height(12.dp))
+                val context = androidx.compose.ui.platform.LocalContext.current
+                var saved by remember(resultBitmap) { mutableStateOf(false) }
+                Button(
+                    onClick = {
+                        val name = "kilnwork_${System.currentTimeMillis()}"
+                        val uri = saveBitmapToGallery(context, resultBitmap!!, name)
+                        saved = uri != null
+                    },
+                    enabled = !saved,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Panel,
+                        contentColor = Ink,
+                        disabledContainerColor = Panel,
+                        disabledContentColor = Accent
+                    ),
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(if (saved) "saved to gallery" else "save to gallery", fontFamily = FontFamily.Monospace, fontSize = 13.sp)
                 }
             }
 
