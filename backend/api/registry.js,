@@ -1,0 +1,77 @@
+// /api/registry.js
+// A small, honest registry of "free AI" claims. Where we can check
+// without holding someone else's paid credentials, we do it live, right
+// now, on every request. Where a real check would require our own funded
+// key (Gemini, Kling, etc.), we say so plainly and give a manual
+// verification date instead of faking a live probe.
+
+async function checkPollinationsImage() {
+  const start = Date.now();
+  try {
+    const res = await fetch('https://image.pollinations.ai/prompt/test?width=64&height=64&nologo=true');
+    const contentType = res.headers.get('content-type') || '';
+    const ok = res.ok && contentType.startsWith('image/');
+    return {
+      ok,
+      latencyMs: Date.now() - start,
+      detail: ok ? `responded ${res.status}, content-type ${contentType}` : `responded ${res.status}`
+    };
+  } catch (err) {
+    return { ok: false, latencyMs: Date.now() - start, detail: err.message };
+  }
+}
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  const pollinationsCheck = await checkPollinationsImage();
+
+  const registry = [
+    {
+      provider: 'Pollinations — image generation',
+      claim: 'free, no API key, no signup',
+      verification: 'live',
+      verifiedAt: new Date().toISOString(),
+      status: pollinationsCheck.ok ? 'confirmed free' : 'check failed',
+      detail: pollinationsCheck.detail,
+      latencyMs: pollinationsCheck.latencyMs
+    },
+    {
+      provider: 'Pollinations — video generation',
+      claim: 'marketed as free',
+      verification: 'manual',
+      verifiedAt: '2026-09-05',
+      status: 'requires a funded Pollen balance',
+      detail: 'API key exists and has permissions, but Paid balance was 0 and video requests returned UNAUTHORIZED until credit was added.'
+    },
+    {
+      provider: 'Google Gemini — image generation (Nano Banana)',
+      claim: 'marketed as free tier available',
+      verification: 'manual',
+      verifiedAt: '2026-09-05',
+      status: 'requires billing to be linked',
+      detail: 'Free tier quota is 0 requests/day for this model specifically, confirmed via direct API error message pointing to billing docs.'
+    },
+    {
+      provider: 'Kling AI — video generation',
+      claim: 'free tier (66 credits/month)',
+      verification: 'manual',
+      verifiedAt: '2026-09-05',
+      status: 'free tier is web-app only, not API',
+      detail: 'The free allotment is only usable through Kling\'s own consumer site. Developer API access requires prepaid deposits.'
+    },
+    {
+      provider: 'Puter.js — video generation',
+      claim: 'free, user-pays-nothing model',
+      verification: 'manual',
+      verifiedAt: '2026-09-05',
+      status: 'works, requires user sign-in',
+      detail: 'No API key or billing on the developer side. Requires the end user to complete a free Puter account sign-in at runtime.'
+    }
+  ];
+
+  return res.status(200).json({
+    registry,
+    note: 'Entries marked "live" are checked fresh on every request to this endpoint. Entries marked "manual" reflect a real test performed on the verifiedAt date and are not re-checked automatically, since doing so would require holding funded credentials for each provider.'
+  });
+}
