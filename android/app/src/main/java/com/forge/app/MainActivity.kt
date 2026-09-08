@@ -110,42 +110,6 @@ suspend fun generateImage(
     }
 }
 
-suspend fun generateImageWithReference(
-    prompt: String,
-    imageBase64: String,
-    mimeType: String
-): Result<Bitmap> = withContext(Dispatchers.IO) {
-    try {
-        val body = JSONObject().apply {
-            put("prompt", prompt)
-            put("imageBase64", imageBase64)
-            put("mimeType", mimeType)
-        }.toString().toRequestBody(JSON)
-
-        val request = Request.Builder()
-            .url("${BuildConfig.API_BASE_URL}/api/generate-reference")
-            .post(body)
-            .build()
-
-        client.newCall(request).execute().use { response ->
-            val text = response.body?.string() ?: ""
-            if (!response.isSuccessful) {
-                val message = try { JSONObject(text).optString("error", text) } catch (e: Exception) { text }
-                return@withContext Result.failure(IOException(message))
-            }
-            val json = JSONObject(text)
-            val dataUrl = json.getString("image")
-            val base64 = dataUrl.substringAfter("base64,")
-            val bytes = Base64.decode(base64, Base64.DEFAULT)
-            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                ?: return@withContext Result.failure(IOException("Could not decode returned image"))
-            Result.success(bitmap)
-        }
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
-}
-
 @Composable
 fun RootScreen() {
     var tab by remember { mutableStateOf(0) }
@@ -187,30 +151,11 @@ fun ForgeScreen() {
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
     var prompt by remember { mutableStateOf("") }
-    var negativePrompt by remember { mutableStateOf("blurry, low quality, distorted") }
+    val negativePrompt = "blurry, low quality, distorted"
     var loading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var resultBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var showTips by remember { mutableStateOf(false) }
-    var referenceUri by remember { mutableStateOf<android.net.Uri?>(null) }
-    var referenceBitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-    val pickReferenceImage = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        referenceUri = uri
-        if (uri != null) {
-            scope.launch {
-                referenceBitmap = withContext(Dispatchers.IO) {
-                    try {
-                        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
-                    } catch (e: Exception) { null }
-                }
-            }
-        } else {
-            referenceBitmap = null
-        }
-    }
 
     Surface(color = Background, modifier = Modifier.fillMaxSize()) {
         Column(
@@ -255,66 +200,6 @@ fun ForgeScreen() {
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
             )
 
-            Spacer(Modifier.height(16.dp))
-
-            Text("NEGATIVE PROMPT", fontSize = 12.sp, color = InkDim, fontFamily = FontFamily.Monospace)
-            Spacer(Modifier.height(6.dp))
-            OutlinedTextField(
-                value = negativePrompt,
-                onValueChange = { negativePrompt = it },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Panel,
-                    unfocusedContainerColor = Panel,
-                    focusedTextColor = Ink,
-                    unfocusedTextColor = Ink,
-                    focusedBorderColor = Accent,
-                    unfocusedBorderColor = Line
-                )
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            Text("REFERENCE IMAGE (optional)", fontSize = 12.sp, color = InkDim, fontFamily = FontFamily.Monospace)
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (referenceBitmap != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                    ) {
-                        Image(
-                            bitmap = referenceBitmap!!.asImageBitmap(),
-                            contentDescription = "Reference image",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        CornerBrackets(color = Accent, length = 10f, thickness = 2f)
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    TextButton(onClick = {
-                        referenceUri = null
-                        referenceBitmap = null
-                    }) {
-                        Text("remove", color = Danger, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = {
-                            pickReferenceImage.launch(
-                                androidx.activity.result.PickVisualMediaRequest(
-                                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                                )
-                            )
-                        },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Ink)
-                    ) {
-                        Text("choose photo to edit", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-                    }
-                }
-            }
-
             Spacer(Modifier.height(20.dp))
 
             Button(
@@ -327,14 +212,7 @@ fun ForgeScreen() {
                     loading = true
                     resultBitmap = null
                     scope.launch {
-                        val result = if (referenceBitmap != null) {
-                            val stream = java.io.ByteArrayOutputStream()
-                            referenceBitmap!!.compress(Bitmap.CompressFormat.JPEG, 90, stream)
-                            val b64 = Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
-                            generateImageWithReference(prompt, b64, "image/jpeg")
-                        } else {
-                            generateImage(prompt, negativePrompt, 1024, 1024, 25)
-                        }
+                        val result = generateImage(prompt, negativePrompt, 1024, 1024, 25)
                         loading = false
                         result.onSuccess {
                             resultBitmap = it
