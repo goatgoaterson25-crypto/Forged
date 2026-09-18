@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "com.apollo.Forged"
+    namespace = "com.apollo.forged"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.apollo.Forged"
+        applicationId = "com.apollo.forged"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
